@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========== CSS: Variables & base ========== */
+    :root {
+  --card-bg: rgba(255,255,255,0.98);
+  --card-radius: 24px;
+  --card-shadow: 0 24px 48px rgba(15,23,42,0.12);
+  --metric-radius: 16px;
+  --metric-bg: rgba(248,250,252,0.9);
+  --accent: #0ea5e9;
+  --accent-hover: #0284c7;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: rgba(226,232,240,0.8);
+}
+
+*{box-sizing:border-box}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;
+  padding:1.25rem;
+  background:linear-gradient(160deg,#f0f9ff 0%,#e0f2fe 40%,#bae6fd 100%);
+  transition:background .5s ease;
+}
+body.warm{background:linear-gradient(160deg,#fffbeb 0%,#fef3c7 40%,#fde68a 100%)}
+body.hot{background:linear-gradient(160deg,#fff7ed 0%,#ffedd5 40%,#fed7aa 100%)}
+
+.dashboard{
+  background:var(--card-bg);
+  border-radius:var(--card-radius);
+  box-shadow:var(--card-shadow);
+  padding:2rem;
+  max-width:420px;width:100%;
+  text-align:center;border:1px solid var(--border);
+}
+
+.hero h1{margin:0 0 .5rem;font-size:1.35rem;font-weight:700}
+.city{color:var(--text-muted);font-size:.9rem;margin-bottom:.5rem}
+.weather-icon{font-size:4rem;margin:.35rem 0}
+.temp{font-size:3.25rem;font-weight:700;margin:.25rem 0}
+.temp .unit{font-size:1.5rem;color:var(--text-muted)}
+.description{font-size:1rem;color:var(--text-muted);margin:.25rem 0 1rem;text-transform:capitalize}
+
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;margin-top:1.5rem}
+.metric-card{
+  background:var(--metric-bg);border-radius:var(--metric-radius);
+  padding:1rem;border:1px solid var(--border);text-align:left
+}
+.metric-icon{font-size:1.2rem;margin-bottom:.3rem}
+.metric-value{font-size:1.05rem;font-weight:700}
+.metric-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase}
+
+.metric-card.span-2{grid-column:span 2}
+
+.sun-times{display:flex;justify-content:space-around;flex-wrap:wrap;font-size:.9rem}
+
+.footer{margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)}
+.updated{font-size:.78rem;color:var(--text-muted);margin-bottom:.75rem}
+.refresh-btn{
+  padding:.65rem 1.5rem;font-size:.9rem;border:none;border-radius:12px;
+  background:var(--accent);color:white;cursor:pointer;font-weight:600
+}
+.refresh-btn:hover{background:var(--accent-hover)}
+</style>
+</head>
+<body>
+  <div class="dashboard">
+  
+    <section class="hero">
+      <h1>Weather</h1>
+      <p class="city" id="cityName">Bengaluru, India</p>
+      <p class="weather-icon" id="weatherIcon">☀️</p>
+      <p class="temp"><span id="temperature">—</span><span class="unit">°C</span></p>
+      <p class="description" id="description">Loading…</p>
+    </section>
+  
+    <section class="metrics">
+      <div class="metric-card"><div class="metric-icon">💧</div><div class="metric-value" id="humidity">—</div><div class="metric-label">Humidity</div></div>
+      <div class="metric-card"><div class="metric-icon">🌡️</div><div class="metric-value" id="feelsLike">—</div><div class="metric-label">Feels Like</div></div>
+      <div class="metric-card"><div class="metric-icon">💨</div><div class="metric-value" id="windSpeed">—</div><div class="metric-label">Wind (km/h)</div></div>
+      <div class="metric-card"><div class="metric-icon">🔽</div><div class="metric-value" id="pressure">—</div><div class="metric-label">Pressure</div></div>
+      <div class="metric-card"><div class="metric-icon">☀️</div><div class="metric-value" id="uvIndex">—</div><div class="metric-label">UV Index</div></div>
+      <div class="metric-card span-2"><div class="metric-icon">🌬️</div><div class="metric-value" id="aqi">—</div><div class="metric-label">Air Quality</div></div>
+      <div class="metric-card span-2 sun-times">
+        🌅 Sunrise: <span id="sunrise">—</span> 🌇 Sunset: <span id="sunset">—</span>
+      </div>
+    </section>
+  
+    <footer class="footer">
+      <p class="updated" id="updated">—</p>
+      <button class="refresh-btn" id="refreshBtn">Refresh</button>
+    </footer>
+  
+  </div>
+  
+  <script>
+    // ========== MOCK DATA FOR BENGALURU (base values) ==========
+    const BASE = {
+      temp: 28,
+      feels_like: 30,
+      humidity: 65,
+      pressure: 1013,
+      wind: 3.5,
+      uvi: 6.2,
+      aqi: 2,
+      description: "partly cloudy"
+    };
+    
+    function randomize(base, range = 2) {
+      return (base + (Math.random() * range * 2 - range));
+    }
+    
+    function getSunTimes() {
+      const now = new Date();
+      const sunrise = new Date(now);
+      sunrise.setHours(6, 24, 0, 0);
+      const sunset = new Date(now);
+      sunset.setHours(18, 42, 0, 0);
+      return {
+        sunrise: Math.floor(sunrise.getTime() / 1000),
+        sunset: Math.floor(sunset.getTime() / 1000)
+      };
+    }
+    
+    function formatTime(u) {
+      return new Date(u * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    function uvLabel(u) {
+      return u <= 2 ? 'Low' :
+             u <= 5 ? 'Moderate' :
+             u <= 7 ? 'High' :
+             u <= 10 ? 'Very High' : 'Extreme';
+    }
+    
+    function aqiLabel(a) {
+      return ['','Good','Fair','Moderate','Poor','Very Poor'][a];
+    }
+    
+    function loadWeather() {
+      // Simulate new readings on refresh
+      const temp = randomize(BASE.temp, 1.5);
+      const feels = randomize(BASE.feels_like, 1.5);
+      const humidity = Math.round(randomize(BASE.humidity, 5));
+      const pressure = Math.round(randomize(BASE.pressure, 5));
+      const wind = randomize(BASE.wind, 1);
+      const uvi = randomize(BASE.uvi, 1);
+      const aqi = BASE.aqi;
+    
+      const { sunrise, sunset } = getSunTimes();
+    
+      document.getElementById("temperature").textContent = Math.round(temp);
+      document.getElementById("description").textContent = BASE.description;
+      document.getElementById("humidity").textContent = humidity + "%";
+      document.getElementById("feelsLike").textContent = Math.round(feels) + "°C";
+      document.getElementById("windSpeed").textContent = Math.round(wind * 3.6) + " km/h";
+      document.getElementById("pressure").textContent = pressure;
+      document.getElementById("uvIndex").textContent = uvi.toFixed(1) + " (" + uvLabel(uvi) + ")";
+      document.getElementById("aqi").textContent = "AQI " + aqi + " – " + aqiLabel(aqi);
+      document.getElementById("sunrise").textContent = formatTime(sunrise);
+      document.getElementById("sunset").textContent = formatTime(sunset);
+      document.getElementById("updated").textContent =
+        "Updated at " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    document.getElementById("refreshBtn").addEventListener("click", loadWeather);
+    
+    // Initial load
+    loadWeather();
+    </script>
+    
+  </body>
+</html>
